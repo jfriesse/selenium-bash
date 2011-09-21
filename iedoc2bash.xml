@@ -57,6 +57,36 @@ init() {
 	echo "export SELENIUM_BASH_HOST=$host; export SELENIUM_BASH_PORT=$port;"
 	echo "export SELENIUM_BASH_BROWSER=$browser; export SELENIUM_BASH_BROWSER_URL=$browser_url"
 }
+
+# Internal function to display error and exit: [error_msg...]
+err() {
+	echo "$@"
+
+	exit 1
+}
+
+# Quote url
+url_quote() {
+    y="$@";
+
+    y=${y/\\/\\\\}
+    y=${y// /+}
+
+    echo -n "$y" | (while read -n1 c;do
+        [[ "$c" =~ [A-Za-z0-9+] ]] &amp;&amp; echo -n "$c" || (echo -n "%`printf '%02x' \'$c | rev | cut -b -2 | rev`")
+    done)
+}
+
+# Run command: command
+#	command is command to run
+do_command() {
+	if [ "$SELENIUM_BASH_HOST" == "" ] || [ "$SELENIUM_BASH_PORT" == "" ];then
+		err "SELENIUM_BASH_HOST or SELENIUM_BASH_PORT is not initialized"  "aa    a"
+	fi
+
+	url="http://$SELENIUM_BASH_HOST:$SELENIUM_BASH_PORT/selenium-server/driver/?cmd=`url_quote $1`"
+	echo $url
+}
 </xsl:text>
 <!--  <xsl:value-of select="text()"/>-->
 <!---  <xsl:apply-templates /> -->
