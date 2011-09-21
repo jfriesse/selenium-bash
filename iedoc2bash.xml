@@ -20,7 +20,31 @@ limitations under the License.
 <xsl:strip-space elements="*"/>
 
 <xsl:template match="/">
-  <xsl:apply-templates select="//top"/>
+	<xsl:apply-templates select="//top"/>
+	<xsl:apply-templates select="//function" mode="definition" />
+
+<xsl:text># Main
+[ "$1" == "" ] &amp;&amp; usage
+
+cmd="$1"
+shift
+
+case "$cmd" in
+"init")
+	init "$@"
+	;;
+"start")
+	start
+	;;
+"stop")
+	stop
+	;;
+</xsl:text>
+	<xsl:apply-templates select="//function" mode="main" />
+<xsl:text>*)
+	usage
+	;;
+esac</xsl:text>
 </xsl:template>
 
 <xsl:template match="top">
@@ -42,30 +66,30 @@ limitations under the License.
 
 # This file has been automatically generated via XSL
 
-# Initialize session: [host] [port] [browser] [browser_url]
+# Initialize session: [browser_url] [browser] [host] [port]
+#	browser_url - Browser URL (default http://localhost/)
+#	browser - Browser to start (default *firefox)
 #	host - Host with selenium server (default 127.0.0.1)
 #	port - Port with selenium server (default 4444)
-#	browser - Browser to start (default *firefox)
-#	browser_url - Browser URL (default http://localhost/)
 # Echoed is export command with variables SELENIUM_BASH_[HOST|PORT|BROWSER|BROWSER_URL]
 init() {
-	host=${1:-127.0.0.1}
-	port=${2:-4444}
-	browser=${3:-*firefox}
-	browser_url=${4:-http://localhost/}
+	browser_url=${1:-http://localhost/}
+	browser=${2:-*firefox}
+	host=${3:-127.0.0.1}
+	port=${4:-4444}
 
 	echo "export SELENIUM_BASH_HOST=$host; export SELENIUM_BASH_PORT=$port;"
-	echo "export SELENIUM_BASH_BROWSER=$browser; export SELENIUM_BASH_BROWSER_URL=$browser_url"
+	echo "export SELENIUM_BASH_BROWSER=$browser; export SELENIUM_BASH_BROWSER_URL=$browser_url;"
 }
 
 # Internal function to display error and exit: [error_msg...]
 err() {
-	echo "$@"
+	echo "$@" >&amp;2
 
 	exit 1
 }
 
-# Quote url
+# Quote url: url
 url_quote() {
     y="$@";
 
@@ -77,20 +101,101 @@ url_quote() {
     done)
 }
 
-# Run command: command
-#	command is command to run
+# Get response from server: url
+http_get() {
+	wget -q "$1" -O -
+}
+
+# Run command: command [args...]
+#	command - command to execute
+#	args - Argument for commands
 do_command() {
 	if [ "$SELENIUM_BASH_HOST" == "" ] || [ "$SELENIUM_BASH_PORT" == "" ];then
-		err "SELENIUM_BASH_HOST or SELENIUM_BASH_PORT is not initialized"  "aa    a"
+		err "SELENIUM_BASH_HOST or SELENIUM_BASH_PORT is not initialized"
 	fi
 
 	url="http://$SELENIUM_BASH_HOST:$SELENIUM_BASH_PORT/selenium-server/driver/?cmd=`url_quote $1`"
-	echo $url
+
+	shift
+	i=0
+	for param in "$@";do
+		i=$(($i+1))
+		url="$url&amp;$i=`url_quote $param`"
+	done
+
+	[ "$SELENIUM_BASH_SESSION" != "" ] &amp;&amp; url="$url&amp;sessionId=$SELENIUM_BASH_SESSION"
+
+	response=`http_get "$url"`
+	[ "$?" != "0" ] &amp;&amp; err "http_get error: $response"
+
+	[ "${response:0:2}" != "OK" ] &amp;&amp; err "Server error: $response" || echo "$response"
 }
+
+# Get response stored in string: command [args]
+get_string() {
+	cmd="$1"
+	shift
+	res=`do_command "$cmd" "$@"`
+	[ "$?" != 0 ] &amp;&amp; exit 1
+
+	echo ${res:3}
+}
+
+# Start browser
+start() {
+	if [ "$SELENIUM_BASH_BROWSER_URL" == "" ] || [ "$SELENIUM_BASH_BROWSER" == "" ];then
+		err "SELENIUM_BASH_BROWSER or SELENIUM_BASH_BROWSER_URL is not initialized"
+	fi
+
+	res=`get_string "getNewBrowserSession" "$SELENIUM_BASH_BROWSER" "$SELENIUM_BASH_BROWSER_URL"`
+	[ "$?" != 0 ] &amp;&amp; exit 1
+
+	echo "export SELENIUM_BASH_SESSION=$res;"
+}
+
+# Stop browser
+stop() {
+	do_command "testComplete"
+	echo "unset SELENIUM_BASH_SESSION; export SELENIUM_BASH_SESSION;"
+}
+
 </xsl:text>
 <!--  <xsl:value-of select="text()"/>-->
 <!---  <xsl:apply-templates /> -->
 </xsl:template>
 
+<xsl:template match="function" mode="definition">
+	<!-- Func definition -->
+	<xsl:text>fn_</xsl:text>
+	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','_$1'))" />
+	<xsl:text>() {&#10;</xsl:text>
+
+	<xsl:choose>
+		<xsl:when test="count(./return) = 0">
+			<xsl:text>	do_command</xsl:text>
+		</xsl:when>
+		<xsl:otherwise>
+			<xsl:text>	get_string</xsl:text>
+		</xsl:otherwise>
+	</xsl:choose>
+
+	<xsl:text> "</xsl:text>
+	<xsl:value-of select="@name"/>
+	<xsl:text>"</xsl:text>
+	<xsl:text> "$@"</xsl:text>
+
+	<xsl:if test="count(./return) = 0">
+		<xsl:text> >/dev/null</xsl:text>
+	</xsl:if>
+	<xsl:text>&#10;}&#10;&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="function" mode="main">
+	<xsl:text>"</xsl:text>
+	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','-$1'))" />
+	<xsl:text>")&#10;	fn_</xsl:text>
+	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','_$1'))" />
+	<xsl:text> "$@"&#10;	;;&#10;</xsl:text>
+</xsl:template>
 
 </xsl:stylesheet>
