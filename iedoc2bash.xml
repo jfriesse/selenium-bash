@@ -39,6 +39,9 @@ case "$cmd" in
 "stop")
 	stop
 	;;
+"help")
+	help "$@"
+	;;
 </xsl:text>
 	<xsl:apply-templates select="//function" mode="main" />
 <xsl:text>*)
@@ -65,6 +68,52 @@ esac</xsl:text>
 # limitations under the License.
 
 # This file has been automatically generated via XSL
+
+usage() {
+	echo "$0: command [param...]"
+	echo "where command is one of:"
+	echo "	init"
+	echo "	start"
+	echo "	stop"
+	echo "	help"
+</xsl:text>
+<xsl:apply-templates select="//function" mode="usage-list" />
+<xsl:text>
+	echo
+	echo "Use $0 help command to get full description of command"
+}
+
+help() {
+	case "$1" in
+	"init")
+		echo "init [browser_url] [browser] [host] [port]"
+		echo "Initialize session"
+		echo "	browser_url - url to test (default http://localhost/)"
+		echo "	browser - browser to start (default *firefox)"
+		echo "	host - host with selenium server (default 127.0.0.1)"
+		echo "	port - port with selenium selenium (default 4444)"
+		echo
+		echo "export commands are returned and should be used in eval \`$0 init\` way"
+		;;
+	"start")
+		echo "start"
+		echo "Start new browser session"
+		echo "export command is returned and should be used as session in eval \`$0 start\` way"
+		;;
+	"stop")
+		echo "stop"
+		echo "Stop browser session (close browser)"
+		echo "shell commands are returned to unset SELENIUM_BASH_SESSION"
+		;;
+	"help")
+		echo "help command"
+		echo "Displays help for command"
+		;;
+	*)
+		usage
+		;;
+	esac
+}
 
 # Initialize session: [browser_url] [browser] [host] [port]
 #	browser_url - Browser URL (default http://localhost/)
@@ -166,7 +215,9 @@ stop() {
 
 <xsl:template match="function" mode="definition">
 	<!-- Func definition -->
-	<xsl:text>fn_</xsl:text>
+	<xsl:text># Wrapper for </xsl:text>
+	<xsl:value-of select="@name" />
+	<xsl:text> call&#10;fn_</xsl:text>
 	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','_$1'))" />
 	<xsl:text>() {&#10;</xsl:text>
 
@@ -196,6 +247,12 @@ stop() {
 	<xsl:text>")&#10;	fn_</xsl:text>
 	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','_$1'))" />
 	<xsl:text> "$@"&#10;	;;&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="function" mode="usage-list">
+	<xsl:text>	echo "	</xsl:text>
+	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','-$1'))" />
+	<xsl:text>"&#10;</xsl:text>
 </xsl:template>
 
 </xsl:stylesheet>
