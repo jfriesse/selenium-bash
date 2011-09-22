@@ -20,37 +20,7 @@ limitations under the License.
 <xsl:strip-space elements="*"/>
 
 <xsl:template match="/">
-	<xsl:apply-templates select="//top"/>
-	<xsl:apply-templates select="//function" mode="definition" />
-
-<xsl:text># Main
-[ "$1" == "" ] &amp;&amp; usage
-
-cmd="$1"
-shift
-
-case "$cmd" in
-"init")
-	init "$@"
-	;;
-"start")
-	start
-	;;
-"stop")
-	stop
-	;;
-"help")
-	help "$@"
-	;;
-</xsl:text>
-	<xsl:apply-templates select="//function" mode="main" />
-<xsl:text>*)
-	usage
-	;;
-esac</xsl:text>
-</xsl:template>
-
-<xsl:template match="top">
+<!--- generate top of file -->
 <xsl:text>#!/bin/bash
 
 # Copyright 2011 Jan Friesse &lt;jfriesse@gmail.com&gt;
@@ -109,7 +79,9 @@ help() {
 		echo "help command"
 		echo "Displays help for command"
 		;;
-	*)
+</xsl:text>
+<xsl:apply-templates select="//function" mode="cmd-help" />
+<xsl:text>*)
 		usage
 		;;
 	esac
@@ -209,8 +181,37 @@ stop() {
 }
 
 </xsl:text>
-<!--  <xsl:value-of select="text()"/>-->
-<!---  <xsl:apply-templates /> -->
+
+<!-- Function definitions -->
+<xsl:apply-templates select="//function" mode="definition" />
+
+<!-- main -->
+<xsl:text># Main
+[ "$1" == "" ] &amp;&amp; usage
+
+cmd="$1"
+shift
+
+case "$cmd" in
+"init")
+	init "$@"
+	;;
+"start")
+	start
+	;;
+"stop")
+	stop
+	;;
+"help")
+	help "$@"
+	;;
+</xsl:text>
+	<xsl:apply-templates select="//function" mode="main" />
+<xsl:text>*)
+	usage
+	;;
+esac
+</xsl:text>
 </xsl:template>
 
 <xsl:template match="function" mode="definition">
@@ -256,6 +257,53 @@ stop() {
 	<xsl:text>	echo "	</xsl:text>
 	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','-$1'))" />
 	<xsl:text>"&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="function" mode="cmd-help">
+	<xsl:text>	"</xsl:text>
+	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','-$1'))" />
+	<xsl:text>")&#10;</xsl:text>
+
+	<!-- command name + arguments -->
+	<xsl:text>		echo "</xsl:text>
+	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','-$1'))" />
+	<xsl:apply-templates select="./param" mode="cmd-help" />
+	<!-- comment -->
+	<xsl:text>"&#10;		echo '</xsl:text>
+	<xsl:apply-templates select="./comment" mode="cmd-help" />
+	<xsl:text>'&#10;</xsl:text>
+	<xsl:text>		echo&#10;</xsl:text>
+
+	<!-- parameters -->
+	<xsl:apply-templates select="./param" mode="cmd-help2" />
+
+	<!-- description -->
+	<xsl:text>		;;&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="param" mode="cmd-help">
+	<xsl:text> [</xsl:text>
+	<xsl:value-of select="@name" />
+	<xsl:text>]</xsl:text>
+</xsl:template>
+
+<xsl:template match="comment" mode="cmd-help">
+	<xsl:variable name="search">'</xsl:variable>
+	<xsl:variable name="replace">'\\''</xsl:variable>
+	<xsl:variable name="text"><xsl:apply-templates /></xsl:variable>
+	<xsl:value-of select="replace(replace(replace($text,$search,$replace),'&#10;',' '),'  *',' ')" />
+</xsl:template>
+
+<xsl:template match="param" mode="cmd-help2">
+	<xsl:text>		echo '	</xsl:text>
+	<xsl:value-of select="@name" />
+	<xsl:text> - </xsl:text>
+
+	<xsl:variable name="search">'</xsl:variable>
+	<xsl:variable name="replace">'\\''</xsl:variable>
+	<xsl:variable name="text"><xsl:apply-templates /></xsl:variable>
+	<xsl:value-of select="replace(replace(replace($text,$search,$replace),'&#10;',' '),'  *',' ')" />
+	<xsl:text>'&#10;</xsl:text>
 </xsl:template>
 
 </xsl:stylesheet>
