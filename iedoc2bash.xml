@@ -215,12 +215,15 @@ stop() {
 
 <xsl:template match="function" mode="definition">
 	<!-- Func definition -->
-	<xsl:text># Wrapper for </xsl:text>
+	<xsl:text># Generated wrapper for </xsl:text>
 	<xsl:value-of select="@name" />
 	<xsl:text> call&#10;fn_</xsl:text>
 	<xsl:value-of select="lower-case(replace(@name,'([A-Z])','_$1'))" />
 	<xsl:text>() {&#10;</xsl:text>
 
+	<xsl:text>	[ "${#@}" -gt "</xsl:text>
+	<xsl:value-of select="count(./param)" />
+	<xsl:text>" ] &amp;&amp; err "Too much arguments"&#10;&#10;</xsl:text>
 	<xsl:choose>
 		<xsl:when test="count(./return) = 0">
 			<xsl:text>	do_command</xsl:text>
