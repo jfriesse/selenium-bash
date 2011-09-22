@@ -13,3 +13,6 @@ saxon9he.jar:
 
 clean:
 	rm selenium.sh
+
+release: selenium.sh
+	gzip -9 -c selenium.sh > selenium-bash-`date +%F`.sh.gz
