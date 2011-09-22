@@ -50,7 +50,10 @@ usage() {
 <xsl:apply-templates select="//function" mode="usage-list" />
 <xsl:text>
 	echo
-	echo "Use $0 help command to get full description of command"
+	echo "Use $0 help command to get full description of command."
+	echo "$0 help top can be used for display help generated from top xml element (description of locators, ...)"
+
+	exit 1
 }
 
 help() {
@@ -75,6 +78,10 @@ help() {
 		echo "Stop browser session (close browser)"
 		echo "shell commands are returned to unset SELENIUM_BASH_SESSION"
 		;;
+	"top")
+</xsl:text>
+<xsl:apply-templates select="//top" mode="help" />
+<xsl:text>		;;
 	"help")
 		echo "help command"
 		echo "Displays help for command"
@@ -124,7 +131,7 @@ url_quote() {
 
 # Get response from server: url
 http_get() {
-	wget -q "$1" -O -
+	which curl >/dev/null 2>&amp;1 &amp;&amp; curl -s "$1" || wget -q "$1" -O -
 }
 
 # Run command: command [args...]
@@ -147,7 +154,8 @@ do_command() {
 	[ "$SELENIUM_BASH_SESSION" != "" ] &amp;&amp; url="$url&amp;sessionId=$SELENIUM_BASH_SESSION"
 
 	response=`http_get "$url"`
-	[ "$?" != "0" ] &amp;&amp; err "http_get error: $response"
+	res="$?"
+	[ "$res" != "0" ] &amp;&amp; err "http_get error: $res"
 
 	[ "${response:0:2}" != "OK" ] &amp;&amp; err "Server error: $response" || echo "$response"
 }
@@ -304,6 +312,59 @@ esac
 	<xsl:variable name="text"><xsl:apply-templates /></xsl:variable>
 	<xsl:value-of select="replace(replace(replace($text,$search,$replace),'&#10;',' '),'  *',' ')" />
 	<xsl:text>'&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="top" mode="help">
+	<xsl:text>		echo '</xsl:text>
+	<xsl:apply-templates mode="help" />
+	<xsl:text>'&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="text()" mode="help">
+	<xsl:variable name="text"><xsl:value-of select='.' /></xsl:variable>
+	<xsl:variable name="search">'</xsl:variable>
+	<xsl:variable name="replace">'\\''</xsl:variable>
+	<xsl:value-of select="replace(replace(replace(replace($text,$search,$replace),'&#10;',' '),'  *',' '),'^  *','')" />
+</xsl:template>
+
+<xsl:template match="h3" mode="help">
+	<xsl:text>&#10;= </xsl:text>
+	<xsl:apply-templates mode="help" />
+	<xsl:text> =&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="p" mode="help">
+	<xsl:text>&#10;</xsl:text>
+	<xsl:apply-templates mode="help" />
+</xsl:template>
+
+<xsl:template match="blockquote" mode="help">
+	<xsl:text>&#10;</xsl:text>
+	<xsl:apply-templates mode="help" />
+	<xsl:text>&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="li" mode="help">
+	<xsl:param name="indent" />
+
+	<xsl:text>&#10;	</xsl:text>
+	<xsl:value-of select="$indent" />
+	<xsl:text>* </xsl:text>
+
+	<xsl:apply-templates mode="help">
+		<xsl:with-param name="indent">
+			<xsl:value-of select="$indent" />
+			<xsl:text>	</xsl:text>
+		</xsl:with-param>
+	</xsl:apply-templates>
+</xsl:template>
+
+<xsl:template match="ul|ol|dl" mode="help">
+	<xsl:param name="indent" />
+
+	<xsl:apply-templates mode="help" >
+		<xsl:with-param name="indent"><xsl:value-of select="$indent" /></xsl:with-param>
+	</xsl:apply-templates>
 </xsl:template>
 
 </xsl:stylesheet>
