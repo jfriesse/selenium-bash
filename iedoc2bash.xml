@@ -106,8 +106,8 @@ init() {
 	host=${3:-127.0.0.1}
 	port=${4:-4444}
 
-	echo "export SELENIUM_BASH_HOST=$host; export SELENIUM_BASH_PORT=$port;"
-	echo "export SELENIUM_BASH_BROWSER=$browser; export SELENIUM_BASH_BROWSER_URL=$browser_url;"
+	echo "export SELENIUM_BASH_HOST=\"$host\"; export SELENIUM_BASH_PORT=\"$port\";"
+	echo "export SELENIUM_BASH_BROWSER=\"$browser\"; export SELENIUM_BASH_BROWSER_URL=\"$browser_url\";"
 }
 
 # Internal function to display error and exit: [error_msg...]
@@ -179,7 +179,7 @@ start() {
 	res=`get_string "getNewBrowserSession" "$SELENIUM_BASH_BROWSER" "$SELENIUM_BASH_BROWSER_URL"`
 	[ "$?" != 0 ] &amp;&amp; exit 1
 
-	echo "export SELENIUM_BASH_SESSION=$res;"
+	echo "export SELENIUM_BASH_SESSION=\"$res\";"
 }
 
 # Stop browser
