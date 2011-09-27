@@ -168,7 +168,7 @@ get_string() {
 	res=`do_command "$cmd" "$@"`
 	[ "$?" != 0 ] &amp;&amp; exit 1
 
-	echo ${res:3}
+	echo "${res:3}"
 }
 
 # Start browser
