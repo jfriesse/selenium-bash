@@ -121,12 +121,13 @@ err() {
 url_quote() {
     y="$@";
 
-    y=${y/\\/\\\\}
+    y=${y//\\/\\\\}
     y=${y// /+}
 
-    echo -n "$y" | (while read -n1 c;do
-        [[ "$c" =~ [A-Za-z0-9+] ]] &amp;&amp; echo -n "$c" || (echo -n "%`printf '%02x' \'$c | rev | cut -b -2 | rev`")
-    done)
+    for ((i = 0; i &lt; ${#y}; i++));do
+        c=${y:$i:1}
+        [[ "$c" =~ [A-Za-z0-9+] ]] &amp;&amp; echo -n "$c" || (echo -n "%`printf '%02x' \'\"$c\" | rev | cut -b -2 | rev`")
+    done
 }
 
 # Get response from server: url
@@ -148,7 +149,7 @@ do_command() {
 	i=0
 	for param in "$@";do
 		i=$(($i+1))
-		url="$url&amp;$i=`url_quote $param`"
+		url="$url&amp;$i=`url_quote \"$param\"`"
 	done
 
 	[ "$SELENIUM_BASH_SESSION" != "" ] &amp;&amp; url="$url&amp;sessionId=$SELENIUM_BASH_SESSION"
